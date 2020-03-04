@@ -10,11 +10,15 @@ import tqdm
 def save(seq, fname, index, extension):
     output = np.hstack(seq)
     file_name = fname.parent / (fname.stem + f"_{index:04}{extension}")
-    fname.parent.mkdir(exist_ok=True, parents=True)
+    # fname.parent.mkdir(exist_ok=True, parents=True)
     sf.write(file_name, output, samplerate=16000)
 
 
 def cut_sequence(path, vad, path_out, target_len_sec, out_extension):
+    path_out.parent.mkdir(exist_ok=True, parents=True)
+    path_done = path_out.parent / (path_out.stem + ".done")
+    if path_done.exists():
+        return
     data, samplerate = sf.read(path)
 
     assert len(data.shape) == 1
@@ -41,7 +45,7 @@ def cut_sequence(path, vad, path_out, target_len_sec, out_extension):
 
     if to_stitch:
         save(to_stitch, path_out, i, out_extension)
-
+    path_done.touch()
 
 def cut_book(task):
     path_book, root_out, target_len_sec, extension = task

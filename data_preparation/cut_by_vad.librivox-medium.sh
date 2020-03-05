@@ -4,61 +4,17 @@
 #SBATCH --gres=gpu:1                     # Ask for 1 GPU
 #SBATCH --mem=2G                         # Ask for 2 GB of RAM
 #SBATCH --time=3:00:00                   # The job will run for 3 hours
+#SBATCH --array=0-9%1                    # Run 10 jobs, 1 parallel
 #SBATCH -o /scratch/nahwidon/slurm-%j.out# Write the log in $SCRATCH
+#SBATCH -e /scratch/nahwidon/slurm-%j.err# Write the err in $SCRATCH
 
-source $HOME/python3.8/bin/activate
+module load python3.6
 
-EXP=medium
-INTAR="$SCRATCH/librivox/$EXP.tar"
-OUTTAR="$SCRATCH/librivox-cut/$EXP.tar"
+virtualenv --no-download $SLURM_TMPDIR/env  # SLURM_TMPDIR is on the compute node
+source $SLURM_TMPDIR/env/bin/activate
 
-# interactive
-if [[ ! $SLURM_TMPDIR ]]; then
-SLURM_TMPDIR=/localscratch
-fi
-df -h $SLURM_TMPDIR
-
-INDIR="$SLURM_TMPDIR/librivox"
-if [[ -s "$INDIR/$EXP" ]]; then
-    echo "$INDIR/$EXP exist, skip tar -xf $INTAR"
-elif [[ -s $INTAR ]]; then
-    mkdir -p $INDIR
-    cd $INDIR
-    tar -xvf $INTAR
-    cd -
-fi
-OUTDIR="$SLURM_TMPDIR/librivox-cut"
-if [[ -s $OUTTAR ]] && [[ -s "$OUTDIR/$EXP" ]]; then
-    echo "$OUTDIR/$EXP exist, skip tar -xf $OUTTAR"
-elif [[ -s $OUTTAR ]]; then
-    mkdir -p $OUTDIR
-    cd $OUTDIR
-    tar -xvf $OUTTAR
-    cd -
-fi
-
-cd $HOME/libri-light/data_preparation
-echo "\
-python cut_by_vad.py\\
-	--input_dir=$INDIR/$EXP\\
-	--output_dir=$OUTDIR/$EXP\\
-	--target_len_sec=30\\
-	--n_workers=10"
-
-python cut_by_vad.py\
-	--input_dir=$INDIR/$EXP\
-	--output_dir=$OUTDIR/$EXP\
-	--target_len_sec=30\
-	--n_workers=10 &
-pid=$!
-
-#copy model files every 10 min whlie the process is running
-#prevent any loss due to time limit
-while ps -p $pid > /dev/null; do
-    sleep 600
-    cd $OUTDIR
-    tar -uvf $OUTTAR $EXP
-    cd -
-done
-
-kill -9 $pid
+part=$(printf "%01d" $SLURM_ARRAY_TASK_ID)
+echo "Running task $SLURM_ARRAY_TASK_ID"
+echo "SLURM_TMPDIR: $SLURM_TMPDIR"
+echo $HOME/libri-light/data_preparation/cut_by_vad.librivox.sh medium $part
+$HOME/libri-light/data_preparation/cut_by_vad.librivox.sh medium $part

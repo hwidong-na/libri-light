@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1                     # Ask for 1 GPU
 #SBATCH --mem=2G                         # Ask for 2 GB of RAM
 #SBATCH --time=3:00:00                   # The job will run for 3 hours
-#SBATCH --array=0-1%2                    # Run 10 jobs, 2 parallel
+#SBATCH --array=0-1%1                    # Run 10 jobs, 1 parallel
 #SBATCH -o /scratch/nahwidon/slurm-%j.out# Write the log in $SCRATCH
 #SBATCH -e /scratch/nahwidon/slurm-%j.err# Write the err in $SCRATCH
 
